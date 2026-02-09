@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hand Gesture Filipino Language Voice Translator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,500,1,0" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+    <header id="app-header">
+        <div class="header-left">
+            <img src="/static/images/mascot.png" alt="Filipino Mascot" class="header-mascot">
+        </div>
+        <div class="header-center">
+            <div class="header-sun">
+                <svg viewBox="0 0 60 60" width="40" height="40"><circle cx="30" cy="30" r="12" fill="#FCD116"/><g stroke="#FCD116" stroke-width="3" stroke-linecap="round"><line x1="30" y1="4" x2="30" y2="14"/><line x1="30" y1="46" x2="30" y2="56"/><line x1="4" y1="30" x2="14" y2="30"/><line x1="46" y1="30" x2="56" y2="30"/><line x1="11.1" y1="11.1" x2="18.4" y2="18.4"/><line x1="41.6" y1="41.6" x2="48.9" y2="48.9"/><line x1="11.1" y1="48.9" x2="18.4" y2="41.6"/><line x1="41.6" y1="18.4" x2="48.9" y2="11.1"/></g></svg>
+            </div>
+            <h1>Hand Gesture Filipino Language Voice Translator</h1>
+            <p class="header-subtitle">Filipino Sign Language (FSL) Recognition Tool</p>
+        </div>
+        <div class="header-right">
+            <svg class="ph-flag-svg" viewBox="0 0 360 180" width="52" height="26">
+                <!-- Blue stripe -->
+                <rect x="0" y="0" width="360" height="90" fill="#0038A8"/>
+                <!-- Red stripe -->
+                <rect x="0" y="90" width="360" height="90" fill="#CE1126"/>
+                <!-- White triangle -->
+                <polygon points="0,0 170,90 0,180" fill="#FFFFFF"/>
+                <!-- Sun (gold) -->
+                <circle cx="62" cy="90" r="18" fill="none" stroke="#FCD116" stroke-width="4"/>
+                <circle cx="62" cy="90" r="8" fill="#FCD116"/>
+                <!-- 8 sun rays -->
+                <g stroke="#FCD116" stroke-width="3" stroke-linecap="round">
+                    <line x1="62" y1="62" x2="62" y2="70"/>
+                    <line x1="62" y1="110" x2="62" y2="118"/>
+                    <line x1="34" y1="90" x2="42" y2="90"/>
+                    <line x1="82" y1="90" x2="90" y2="90"/>
+                    <line x1="42.2" y1="70.2" x2="48" y2="76"/>
+                    <line x1="76" y1="104" x2="81.8" y2="109.8"/>
+                    <line x1="42.2" y1="109.8" x2="48" y2="104"/>
+                    <line x1="76" y1="76" x2="81.8" y2="70.2"/>
+                </g>
+                <!-- 3 stars -->
+                <polygon points="28,30 30,24 32,30 38,30 33,34 35,40 30,36 25,40 27,34 22,30" fill="#FCD116"/>
+                <polygon points="28,150 30,144 32,150 38,150 33,154 35,160 30,156 25,160 27,154 22,150" fill="#FCD116"/>
+                <polygon points="128,90 130,84 132,90 138,90 133,94 135,100 130,96 125,100 127,94 122,90" fill="#FCD116"/>
+            </svg>
+        </div>
+    </header>
+
+    <div id="app-container">
+        <!-- Left Column: Camera & Detection -->
+        <main id="camera-col">
+            <div id="camera-wrapper">
+                <video id="video" autoplay playsinline muted></video>
+                <canvas id="canvas"></canvas>
+                <div id="camera-placeholder">
+                    <span class="material-symbols-rounded">waving_hand</span>
+                    <p>Click <b>Start</b> to begin!</p>
+                </div>
+                <div id="fps-display">0 FPS</div>
+            </div>
+
+            <div id="detection-wrapper">
+                <div id="detected-sign-card">
+                    <div id="detected-sign">—</div>
+                </div>
+                <div id="detection-info">
+                    <div id="hand-info"><span class="material-symbols-rounded">front_hand</span> —</div>
+                    <div id="confidence-info"><span class="material-symbols-rounded">percent</span> —</div>
+                </div>
+            </div>
+            
+            <div id="hold-progress">
+                <div id="progress-fill"></div>
+                <span id="holding-sign"></span>
+            </div>
+
+            <button id="btn-camera" class="btn btn-primary">
+                <span class="material-symbols-rounded">play_arrow</span>
+                <span>Start Camera</span>
+            </button>
+        </main>
+
+        <!-- Right Column: Text & Actions -->
+        <aside id="output-col">
+            <div class="output-card" id="text-card">
+                <div class="card-header">
+                    <h3>Recognized Text</h3>
+                    <button id="btn-copy" class="icon-btn" title="Copy Text"><span class="material-symbols-rounded">content_copy</span></button>
+                </div>
+                <div id="text-display">
+                    <p id="text-content"></p>
+                </div>
+                <div id="translation-display">
+                    <span class="material-symbols-rounded">translate</span>
+                    <p id="translation-content">—</p>
+                </div>
+            </div>
+
+            <div id="suggestions-grid">
+                <button class="suggestion-btn" data-index="0"><span class="sug-num">1</span><span class="sug-text">—</span></button>
+                <button class="suggestion-btn" data-index="1"><span class="sug-num">2</span><span class="sug-text">—</span></button>
+                <button class="suggestion-btn" data-index="2"><span class="sug-num">3</span><span class="sug-text">—</span></button>
+                <button class="suggestion-btn" data-index="3"><span class="sug-num">4</span><span class="sug-text">—</span></button>
+                <button class="suggestion-btn" data-index="4"><span class="sug-num">5</span><span class="sug-text">—</span></button>
+            </div>
+
+            <div id="actions-grid">
+                <button id="btn-space" class="btn btn-light"><span class="material-symbols-rounded">space_bar</span> Space</button>
+                <button id="btn-delete" class="btn btn-light"><span class="material-symbols-rounded">backspace</span> Delete</button>
+                <button id="btn-clear" class="btn btn-light btn-danger"><span class="material-symbols-rounded">delete_sweep</span> Clear</button>
+            </div>
+
+            <div class="output-card" id="speak-card">
+                 <div class="card-header">
+                    <h3>Voice Output</h3>
+                    <div class="speak-options">
+                        <select id="tts-lang">
+                            <option value="fil-PH">Filipino</option>
+                            <option value="en-US">English</option>
+                        </select>
+                        <select id="voice-engine">
+                            <option value="google-ai" selected>Voice 1</option>
+                            <option value="browser">Voice 2 </option>
+                        </select>
+                    </div>
+                </div>
+                <button id="btn-speak" class="btn btn-accent"><span class="material-symbols-rounded">campaign</span> Speak Text</button>
+            </div>
+            
+            <div class="app-footer">
+                <button id="btn-help" class="footer-btn"><span class="material-symbols-rounded">help</span> Help</button>
+                <button id="btn-settings" class="footer-btn"><span class="material-symbols-rounded">settings</span> Settings</button>
+                <div id="status-indicator">
+                    <span id="status-dot"></span>
+                    <span id="status-text">Ready</span>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Modals (identical structure, just for completeness) -->
+    <div id="help-modal" class="modal hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-box">
+            <div class="modal-head"><h2>How to Use</h2><button class="modal-x" data-close="help-modal"><span class="material-symbols-rounded">close</span></button></div>
+            <div class="modal-body">
+                <ol>
+                    <li>Click <b>Start Camera</b> and allow access.</li>
+                    <li>Show a hand sign clearly to the camera.</li>
+                    <li>Hold the sign steady until it's recognized.</li>
+                    <li>Use the action buttons to edit the text.</li>
+                    <li>Click <b>Speak Text</b> to hear the translation.</li>
+                </ol>
+                <p><b>Supported:</b> A-Z, NG, 1, and motion signs J & Z.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="settings-modal" class="modal hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-box">
+            <div class="modal-head"><h2>Settings</h2><button class="modal-x" data-close="settings-modal"><span class="material-symbols-rounded">close</span></button></div>
+            <div class="modal-body">
+                <div class="setting">
+                    <label>Sign Hold Time</label>
+                    <div class="slider-row"><input type="range" id="setting-stability" min="5" max="30" value="15"><span id="stability-value" class="val">15</span></div>
+                </div>
+                <div class="setting">
+                    <label>Letter Cooldown (sec)</label>
+                    <div class="slider-row"><input type="range" id="setting-cooldown" min="0.5" max="3" step="0.1" value="1.0"><span id="cooldown-value" class="val">1.0</span></div>
+                </div>
+                <div class="setting">
+                    <label>Speech Rate</label>
+                    <div class="slider-row"><input type="range" id="setting-rate" min="0.5" max="2" step="0.1" value="1.0"><span id="rate-value" class="val">1.0</span></div>
+                </div>
+                <div class="setting">
+                    <label>Speech Pitch</label>
+                    <div class="slider-row"><input type="range" id="setting-pitch" min="0.5" max="1.5" step="0.1" value="1.0"><span id="pitch-value" class="val">1.0</span></div>
+                </div>
+                 <div id="voice-picker" class="setting" style="display:none">
+                    <label for="voice-select">Browser Voice</label>
+                    <select id="voice-select"><option value="auto">Auto (Best)</option></select>
+                </div>
+                 <button id="btn-test-voice" class="btn btn-light"><span class="material-symbols-rounded">headphones</span> Test Voice</button>
+                 <p id="voice-tip" class="tip"></p>
+                 <div id="voices-list" class="voices-list"></div>
+            </div>
+            <div class="modal-foot"><button class="btn btn-primary" id="btn-save-settings">Save & Close</button></div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3.1675466124/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="/static/js/recognizer.js"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
