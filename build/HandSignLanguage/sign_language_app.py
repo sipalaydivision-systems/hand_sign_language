@@ -1,5 +1,5 @@
 """
-Hand Sign Language Recognition System - Full Application Design
+Hand Gesture Filipino Language Voice Translator - Full Application Design
 A modern desktop application with professional UI using tkinter/customtkinter.
 """
 
@@ -1022,7 +1022,7 @@ class SignLanguageApp:
             self.root = tk.Tk()
             self.root.configure(bg=self.COLORS['bg_main'])
         
-        self.root.title("✋Hand Sign Language")
+        self.root.title("✋ Hand Gesture Filipino Language Voice Translator")
         self.root.geometry("1400x900")
         self.root.minsize(1000, 700)
         
@@ -1057,8 +1057,8 @@ class SignLanguageApp:
         # Title
         ctk.CTkLabel(
             header_row,
-            text="Hand Sign Language ",
-            font=("Segoe UI", 26, "bold"),
+            text="Hand Gesture Filipino Language Voice Translator",
+            font=("Segoe UI", 24, "bold"),
             text_color=self.COLORS['text_dark']
         ).pack(side="left", padx=10)
         
@@ -1237,8 +1237,8 @@ class SignLanguageApp:
         self.root.configure(bg=self.COLORS['bg_main'])
         
         # Title
-        title = tk.Label(self.root, text="✋ Sign Language Recognition",
-                        font=("Segoe UI", 28, "bold"), bg=self.COLORS['bg_panel'],
+        title = tk.Label(self.root, text="✋ Hand Gesture Filipino Language Voice Translator",
+                        font=("Segoe UI", 24, "bold"), bg=self.COLORS['bg_panel'],
                         fg=self.COLORS['text_white'])
         title.pack(fill="x", pady=20)
         
@@ -1752,7 +1752,7 @@ Gestures:  👍 Thumbs Up"""
 def main():
     """Main entry point."""
     print("=" * 50)
-    print("Hand Sign Language Recognition System v2.0")
+    print("Hand Gesture Filipino Language Voice Translator v2.0")
     print("=" * 50)
     
     app = SignLanguageApp()

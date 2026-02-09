@@ -1,6 +1,6 @@
-# ✋ Hand Sign Language Recognition System
+# ✋ Hand Gesture Filipino Language Voice Translator
 
-A powerful, accessible application that recognizes hand sign language and converts it to text with real-time translation and text-to-speech capabilities.
+A powerful, accessible application that recognizes hand gestures for Filipino Sign Language and converts it to text with real-time translation and text-to-speech capabilities.
 
 ## Features
 
