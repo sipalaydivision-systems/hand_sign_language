@@ -43,6 +43,7 @@ venv.bak/
 
 # User-specific files
 hand_landmarker.task
+HandSignLanguage.exe
 *.mp3
 *.wav
 *.mp4
