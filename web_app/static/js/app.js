@@ -17,8 +17,7 @@ const app = {
         letterCooldown: 1.0,
         speechRate: 1.0,
         speechPitch: 1.0,
-        voiceEngine: 'google-ai', // 'google-ai' or 'browser'
-        ttsLang: 'fil-PH', // 'fil-PH' or 'en-US'
+        voiceGender: 'female',
     }
 };
 
@@ -57,8 +56,7 @@ const dom = {
     rateValue: document.getElementById('rate-value'),
     settingPitch: document.getElementById('setting-pitch'),
     pitchValue: document.getElementById('pitch-value'),
-    voiceEngineSelect: document.getElementById('voice-engine'),
-    ttsLangSelect: document.getElementById('tts-lang'),
+    voiceGenderSelect: document.getElementById('voice-gender'),
     voicePicker: document.getElementById('voice-picker'),
     voiceSelect: document.getElementById('voice-select'),
     voicesList: document.getElementById('voices-list'),
@@ -171,8 +169,9 @@ function onHandResults(results) {
     const rec = app.recognizer.processResults(results);
     if (rec) {
         updateDetection(rec);
-        if (rec.sign.length === 1 && /^[A-Z]$/.test(rec.sign)) {
+        if (/^[A-Z]$/.test(rec.sign) || rec.sign === 'NG') {
             if (app.recognizer.addLetter(rec.sign, rec.confidence)) {
+                speakLetter(rec.sign);
                 updateTextDisplay();
                 updateSuggestions();
                 pulseElement(dom.btnSpace);
@@ -228,11 +227,7 @@ function updateTextDisplay() {
     getAccurateTranslation(t);
 }
 
-function updateSuggestions() {
-    const text = app.recognizer.textBuffer;
-    const words = text.split(' ');
-    const cur = words[words.length - 1]?.toLowerCase() || '';
-    const sug = app.suggester.getSuggestions(cur);
+function renderSuggestions(sug) {
     app.recognizer.suggestions = sug;
     dom.suggestionBtns.forEach((btn, i) => {
         const sugText = btn.querySelector('.sug-text');
@@ -245,6 +240,36 @@ function updateSuggestions() {
             btn.classList.remove('active');
         }
     });
+}
+
+let _suggestTimer = null;
+function updateSuggestions() {
+    const text = app.recognizer.textBuffer;
+    const words = text.split(' ');
+    const cur = words[words.length - 1]?.toLowerCase() || '';
+
+    // Show local suggestions instantly
+    const local = app.suggester.getSuggestions(cur);
+    renderSuggestions(local);
+
+    // Fetch Gemini suggestions in background (debounced)
+    if (!cur) return;
+    clearTimeout(_suggestTimer);
+    _suggestTimer = setTimeout(async () => {
+        try {
+            const r = await fetch('/api/suggest', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prefix: cur, context: text.trim() })
+            });
+            if (r.ok) {
+                const d = await r.json();
+                if (d.suggestions && d.suggestions.length > 0) {
+                    renderSuggestions(d.suggestions);
+                }
+            }
+        } catch (e) { /* keep local suggestions */ }
+    }, 500);
 }
 
 function selectSuggestion(idx) {
@@ -337,59 +362,99 @@ function getBestVoice(langCode) {
 function speakText() {
     const raw = app.recognizer.textBuffer.trim();
     if (!raw) return;
-    // Convert to lowercase so TTS reads words, not individual letters
-    const text = raw.toLowerCase();
-    const lang = app.settings.ttsLang;
-    const engine = app.settings.voiceEngine;
-
-    if (lang === 'fil-PH' && engine === 'google-ai') {
-        // Use the already translated text if available
-        const translatedText = dom.translationContent.textContent;
-        speakWithGoogleAI(translatedText && translatedText !== '—' ? translatedText : text, lang);
-    } else if (lang === 'fil-PH' && engine === 'browser') {
-        const translatedText = dom.translationContent.textContent;
-        speakWithBrowser(translatedText && translatedText !== '—' ? translatedText : text, lang);
-    }
-    else { // English
-        engine === 'google-ai' ? speakWithGoogleAI(text, lang) : speakWithBrowser(text, lang);
-    }
+    const translated = dom.translationContent.textContent;
+    const text = (translated && translated !== '—') ? translated : raw.toLowerCase();
+    speakWithEdge(text);
 }
 
-async function getAccurateTranslation(text) {
-    if (!text) {
-        dom.translationContent.textContent = '';
+const _transCache = new Map();
+let _transTimer = null;
+
+function getAccurateTranslation(text) {
+    if (!text) { dom.translationContent.textContent = ''; return; }
+
+    const key = text.toLowerCase().trim();
+
+    // 1. Show cached result immediately — no delay at all
+    if (_transCache.has(key)) {
+        dom.translationContent.textContent = _transCache.get(key);
         return;
     }
-    try {
-        const r = await fetch('/api/translate', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({text, to:'fil'}) });
-        if (r.ok) {
+
+    // 2. Show local dictionary result instantly as a placeholder
+    const local = translateToFilipinoLocal(text);
+    if (local) dom.translationContent.textContent = local;
+
+    // 3. Fire API only after user pauses for 700ms (debounce)
+    clearTimeout(_transTimer);
+    _transTimer = setTimeout(async () => {
+        try {
+            const r = await fetch('/api/translate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text, to: 'fil' })
+            });
+            if (!r.ok) return;
             const d = await r.json();
             if (d.translated) {
-                dom.translationContent.textContent = d.translated;
-                return d.translated;
+                _transCache.set(key, d.translated);
+                if (app.recognizer.textBuffer.toLowerCase().trim() === key) {
+                    dom.translationContent.textContent = d.translated;
+                }
+                // Pre-load audio in background so Speak is instant
+                prefetchAudio(d.translated);
             }
-        }
-    } catch (e) { console.warn('[Translate] API failed:', e.message); }
-    // Fallback to local if API fails
-    const local = translateToFilipinoLocal(text);
-    dom.translationContent.textContent = local || '';
-    return local || text;
+        } catch (e) { /* keep local translation showing */ }
+    }, 700);
 }
 
 let currentAudio = null;
-async function speakWithGoogleAI(text, lang) {
-    stopAudio(); speechSynthesis.cancel();
-    setStatus(`Speaking (${lang === 'fil-PH' ? 'Filipino' : 'English'})...`);
+const _audioCache = new Map();
+
+async function _fetchAudioUrl(text, voice) {
+    const r = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, voice })
+    });
+    if (!r.ok) throw new Error('TTS failed');
+    const url = URL.createObjectURL(await r.blob());
+    return url;
+}
+
+async function prefetchAudio(text) {
+    if (!text) return;
+    const voice = app.settings.voiceGender || 'female';
+    const key = `${voice}:${text}`;
+    if (_audioCache.has(key)) return;
+    try { _audioCache.set(key, await _fetchAudioUrl(text, voice)); } catch (e) {}
+}
+
+async function speakWithEdge(text) {
+    stopAudio();
+    const voice = app.settings.voiceGender || 'female';
+    const key = `${voice}:${text}`;
+
+    if (_audioCache.has(key)) {
+        currentAudio = new Audio(_audioCache.get(key));
+        currentAudio.playbackRate = app.settings.speechRate;
+        currentAudio.onended = () => { currentAudio = null; setStatus('Ready'); };
+        await currentAudio.play();
+        return;
+    }
+
+    setStatus('Speaking...');
     try {
-        const r = await fetch('/api/tts', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({text, lang}) });
-        if (!r.ok) throw new Error((await r.json()).error || 'TTS failed');
-        const blob = await r.blob(); const url = URL.createObjectURL(blob);
+        const url = await _fetchAudioUrl(text, voice);
+        _audioCache.set(key, url);
         currentAudio = new Audio(url);
         currentAudio.playbackRate = app.settings.speechRate;
-        currentAudio.onended = () => { URL.revokeObjectURL(url); currentAudio = null; setStatus('Ready'); };
-        currentAudio.onerror = () => { URL.revokeObjectURL(url); currentAudio = null; setStatus('Audio error'); speakWithBrowser(text, lang); };
+        currentAudio.onended = () => { currentAudio = null; setStatus('Ready'); };
+        currentAudio.onerror = () => { currentAudio = null; setStatus('Ready'); };
         await currentAudio.play();
-    } catch (e) { console.error('[TTS]', e); setStatus('Google AI unavailable, using browser'); speakWithBrowser(text, lang); }
+    } catch (e) {
+        setStatus('Ready');
+    }
 }
 
 function stopAudio() { if (currentAudio) { currentAudio.pause(); currentAudio.currentTime = 0; currentAudio = null; } }
@@ -414,30 +479,59 @@ function getSelectedVoice(lc) {
 }
 
 function testVoice() {
-    const lang = app.settings.ttsLang;
-    const engine = app.settings.voiceEngine;
-    const sample = lang === 'fil-PH' ? 'Kumusta! Magandang araw!' : 'Hello! Nice to meet you!';
-    if (engine === 'google-ai') { speakWithGoogleAI(sample, lang); return; }
-    stopAudio();
-    const u = new SpeechSynthesisUtterance(sample);
-    u.lang = lang; u.rate = app.settings.speechRate; u.pitch = app.settings.speechPitch;
-    const v = getSelectedVoice(lang);
-    if (v) { u.voice = v; u.lang = v.lang; }
-    speechSynthesis.cancel(); speechSynthesis.speak(u);
-    setStatus(`Testing: ${v ? v.name.split(' ')[0] : 'default'}...`);
-    u.onend = () => setStatus('Ready');
+    speakWithEdge('Kumusta! Magandang araw po sa inyong lahat!');
 }
 
 function updateEngineUI() {
-    const engine = app.settings.voiceEngine;
-    dom.voicePicker.style.display = engine === 'browser' ? 'block' : 'none';
-    dom.voiceTip.textContent = engine === 'google-ai'
-        ? 'Google AI — fluent in Filipino & English.'
-        : 'For best quality, use Microsoft Edge browser.';
+    if (dom.voicePicker) dom.voicePicker.style.display = 'none';
+    if (dom.voiceTip) dom.voiceTip.textContent = 'Microsoft Neural TTS — fil-PH-BlessicaNeural / fil-PH-AngeloNeural';
+}
+
+// ── Letter & Word Audio ──
+function speakLetter(letter) {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(letter);
+    u.lang = 'en-US';
+    u.rate = 1.4;
+    u.volume = 0.8;
+    speechSynthesis.speak(u);
+}
+
+async function speakCompletedWord(word) {
+    if (!word) return;
+    const key = word.toLowerCase().trim();
+
+    // Use cached translation if available — instant, no API call
+    if (_transCache.has(key)) {
+        speakWithEdge(_transCache.get(key));
+        return;
+    }
+
+    try {
+        const r = await fetch('/api/translate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: key, to: 'fil' })
+        });
+        const d = await r.json();
+        const text = (d.translated && d.translated !== key) ? d.translated : key;
+        _transCache.set(key, text);
+        speakWithEdge(text);
+    } catch (e) {
+        speakWithEdge(key);
+    }
 }
 
 // ── Actions ──
-function addSpace() { app.recognizer.addSpace(); updateTextDisplay(); updateSuggestions(); pulseElement(dom.btnSpace); }
+function addSpace() {
+    const words = app.recognizer.textBuffer.trim().split(' ');
+    const lastWord = words[words.length - 1];
+    app.recognizer.addSpace();
+    updateTextDisplay();
+    updateSuggestions();
+    pulseElement(dom.btnSpace);
+    if (lastWord) speakCompletedWord(lastWord);
+}
 function doBackspace() { app.recognizer.backspace(); updateTextDisplay(); updateSuggestions(); pulseElement(dom.btnDelete); }
 function clearAll() { app.recognizer.clear(); updateTextDisplay(); updateSuggestions(); pulseElement(dom.btnClear); }
 function copyText() {
@@ -459,8 +553,7 @@ function saveSettings() {
     app.settings.letterCooldown = parseFloat(dom.settingCooldown.value);
     app.settings.speechRate = parseFloat(dom.settingRate.value);
     app.settings.speechPitch = parseFloat(dom.settingPitch.value);
-    app.settings.voiceEngine = dom.voiceEngineSelect.value;
-    app.settings.ttsLang = dom.ttsLangSelect.value;
+    app.settings.voiceGender = dom.voiceGenderSelect ? dom.voiceGenderSelect.value : 'female';
 
     app.recognizer.stableThreshold = app.settings.stableThreshold;
     app.recognizer.letterCooldown = app.settings.letterCooldown;
@@ -480,8 +573,7 @@ function loadSettings() {
     dom.rateValue.textContent = app.settings.speechRate.toFixed(1);
     dom.settingPitch.value = app.settings.speechPitch;
     dom.pitchValue.textContent = app.settings.speechPitch.toFixed(1);
-    dom.voiceEngineSelect.value = app.settings.voiceEngine;
-    dom.ttsLangSelect.value = app.settings.ttsLang;
+    if (dom.voiceGenderSelect) dom.voiceGenderSelect.value = app.settings.voiceGender;
     updateEngineUI();
     populateVoiceDropdown();
 }
@@ -496,15 +588,11 @@ function bindEvents() {
     dom.btnClear.addEventListener('click', clearAll);
     dom.btnCopy.addEventListener('click', copyText);
     dom.btnTestVoice.addEventListener('click', testVoice);
-    dom.voiceEngineSelect.addEventListener('change', () => {
-        app.settings.voiceEngine = dom.voiceEngineSelect.value;
-        updateEngineUI();
-    });
-    dom.ttsLangSelect.addEventListener('change', () => {
-        app.settings.ttsLang = dom.ttsLangSelect.value;
-        populateVoiceDropdown();
-    });
-
+    if (dom.voiceGenderSelect) {
+        dom.voiceGenderSelect.addEventListener('change', () => {
+            app.settings.voiceGender = dom.voiceGenderSelect.value;
+        });
+    }
     dom.suggestionBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             if (btn.classList.contains('active')) {

@@ -120,13 +120,9 @@
                  <div class="card-header">
                     <h3>Voice Output</h3>
                     <div class="speak-options">
-                        <select id="tts-lang">
-                            <option value="fil-PH">Filipino</option>
-                            <option value="en-US">English</option>
-                        </select>
-                        <select id="voice-engine">
-                            <option value="google-ai" selected>Voice 1</option>
-                            <option value="browser">Voice 2 </option>
+                        <select id="voice-gender">
+                            <option value="female" selected>Female</option>
+                            <option value="male">Male</option>
                         </select>
                     </div>
                 </div>
@@ -157,7 +153,10 @@
                     <li>Use the action buttons to edit the text.</li>
                     <li>Click <b>Speak Text</b> to hear the translation.</li>
                 </ol>
-                <p><b>Supported:</b> A-Z, NG, 1, and motion signs J & Z.</p>
+                <p><b>Letters:</b> A B C D E F G H I J K L M N O P Q R S T U V W X Y Z</p>
+                <p><b>Filipino:</b> NG (thumb touches ring, others extended)</p>
+                <p><b>Motion signs:</b> J — draw J with pinky · Z — draw Z with index finger</p>
+                <p><b>Keys:</b> Space · Backspace · Enter (speak) · R (clear)</p>
             </div>
         </div>
     </div>
@@ -189,7 +188,7 @@
                 </div>
                  <button id="btn-test-voice" class="btn btn-light"><span class="material-symbols-rounded">headphones</span> Test Voice</button>
                  <p id="voice-tip" class="tip"></p>
-                 <div id="voices-list" class="voices-list"></div>
+                 <div id="voices-list" class="voices-list" style="display:none"></div>
             </div>
             <div class="modal-foot"><button class="btn btn-primary" id="btn-save-settings">Save & Close</button></div>
         </div>

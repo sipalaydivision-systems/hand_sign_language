@@ -272,7 +272,7 @@ class HandSignRecognizer {
             const tRing   = this.dist(lm, LM.THUMB_TIP, LM.RING_PIP);
             const tPinky  = this.dist(lm, LM.THUMB_TIP, LM.PINKY_MCP);
 
-            // A — fist with thumb extended (beside the fist)
+            // A — fist with thumb extended to the side
             if (f.thumb)
                 return { sign: 'A', confidence: 0.88 };
 
@@ -378,10 +378,6 @@ class HandSignRecognizer {
         // ── NG — Thumb touching ring finger, others extended (Filipino-specific) ──
         if (f.index && f.middle && !f.ring && f.pinky && thumbRingDist < 0.06)
             return { sign: 'NG', confidence: 0.75 };
-
-        // ── 1 — Index only (no thumb) ──
-        if (f.index && !f.middle && !f.ring && !f.pinky && !f.thumb)
-            return { sign: '1', confidence: 0.85 };
 
         return { sign: '?', confidence: 0.0 };
     }
