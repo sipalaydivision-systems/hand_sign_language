@@ -1,9 +1,6 @@
 flask
+gunicorn
 gTTS
 deep-translator
-opencv-python
-mediapipe
-customtkinter
-pillow
-pyttsx3
+edge-tts
 google-generativeai

@@ -108,7 +108,9 @@ def text_to_speech():
 
     # Try Microsoft Edge Neural TTS
     try:
-        audio = asyncio.run(_edge_tts_bytes(text, voice))
+        loop = asyncio.new_event_loop()
+        audio = loop.run_until_complete(_edge_tts_bytes(text, voice))
+        loop.close()
         _tts_cache[cache_key] = audio
         return send_file(io.BytesIO(audio), mimetype='audio/mpeg',
                          as_attachment=False, download_name='speech.mp3')
